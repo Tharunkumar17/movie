@@ -1,0 +1,46 @@
+Service 1: Movie Service
+
+    Responsibilities: Manages movie details (title, genre, rating, available shows).
+    Operations:
+        POST: Add a new movie.
+        GET: Get details of a movie (show timings, details).
+        PUT: Update movie details.
+        DELETE: Remove a movie from the system.
+
+Service 2: User Service
+
+    Responsibilities: Manages user information (name, email, past bookings).
+    Operations:
+        POST: Register a new user.
+        GET: Get user details.
+        PUT: Update user profile.
+        DELETE: Deactivate user account.
+
+
+Service 3: Booking Service (Simplified)
+
+    Responsibilities:
+
+            Manages movie ticket bookings, focusing on basic operations like booking and viewing bookings.
+
+     Simplified Operations:
+
+            POST: Book a movie ticket for a show.
+            GET: Get booking details (movie name, showtime, and number of tickets booked).
+            DELETE: Cancel a booking.
+
+___________________________________________________________________________________________________________________________________________
+
+Movie Service:
+            variables : Movie Id, movie name, movieGenere, MovieTimings.
+UserService : 
+
+    User Entity:  id, name, email, password, phoneNumber, and pastBookings. The id is the primary key and is auto-generated.
+
+    User DTO: The UserDTO class is a simple data container that will be used to send and receive user data via HTTP requests. For instance, when creating a new user, the data would be sent as a JSON object that maps to this DTO.
+
+    UserService Methods: Based on your application, you'll need basic CRUD operations for users, such as:
+        POST: Register a new user (using the UserDTO).
+        GET: Retrieve user details (using the UserDTO).
+        PUT: Update user profile.
+        DELETE: Deactivate or delete the user account.
