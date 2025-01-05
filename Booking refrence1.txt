@@ -1,0 +1,397 @@
+To create a Maven Spring Boot application for your "Booking Service", we'll break it down into multiple components:
+
+1. **Booking Entity** - A class representing the `Booking` in the database.
+2. **Booking DTO** - A Data Transfer Object for the booking.
+3. **Controller** - The REST controller to handle API requests.
+4. **Service** - Business logic for handling bookings.
+5. **Repository** - Interface to interact with the database.
+6. **Java Bean Config** - Spring configuration class (optional for configuration).
+
+Below is a simple and easy-to-understand example of how you can structure this Booking Service.
+
+---
+
+### 1. **Booking Entity**
+
+This is the model class that will represent the `Booking` entity in your database.
+
+```java
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+public class Booking {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
+    @ManyToOne
+    @JoinColumn(name = "movie_id", nullable = false)
+    private Movie movie;
+    
+    private LocalDateTime bookingTime;
+    private LocalDateTime showTime;
+    private int seats;
+    private double totalPrice;
+    private String status;
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
+    }
+    
+    public Movie getMovie() {
+        return movie;
+    }
+    
+    public void setMovie(Movie movie) {
+        this.movie = movie;
+    }
+
+    public LocalDateTime getBookingTime() {
+        return bookingTime;
+    }
+
+    public void setBookingTime(LocalDateTime bookingTime) {
+        this.bookingTime = bookingTime;
+    }
+
+    public LocalDateTime getShowTime() {
+        return showTime;
+    }
+
+    public void setShowTime(LocalDateTime showTime) {
+        this.showTime = showTime;
+    }
+
+    public int getSeats() {
+        return seats;
+    }
+
+    public void setSeats(int seats) {
+        this.seats = seats;
+    }
+
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}
+```
+
+---
+
+### 2. **BookingDTO**
+
+This is the Data Transfer Object (DTO) class for booking information.
+
+```java
+public class BookingDTO {
+    private Long userId;
+    private Long movieId;
+    private LocalDateTime showTime;
+    private int seats;
+    private String status;
+
+    // Getters and Setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Long getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(Long movieId) {
+        this.movieId = movieId;
+    }
+
+    public LocalDateTime getShowTime() {
+        return showTime;
+    }
+
+    public void setShowTime(LocalDateTime showTime) {
+        this.showTime = showTime;
+    }
+
+    public int getSeats() {
+        return seats;
+    }
+
+    public void setSeats(int seats) {
+        this.seats = seats;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}
+```
+
+---
+
+### 3. **Booking Repository**
+
+This is an interface that extends `JpaRepository` to interact with the database.
+
+```java
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+    
+    List<Booking> findByUserId(Long userId);  // Custom query to find bookings by user ID
+}
+```
+
+---
+
+### 4. **Booking Service**
+
+This service will contain the business logic for handling bookings.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class BookingService {
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private UserService userService; // Service to handle users
+
+    @Autowired
+    private MovieService movieService; // Service to handle movies
+
+    // Create a new booking
+    public Booking createBooking(BookingDTO bookingDTO) {
+        User user = userService.getUserById(bookingDTO.getUserId());
+        Movie movie = movieService.getMovieById(bookingDTO.getMovieId());
+
+        Booking booking = new Booking();
+        booking.setUser(user);
+        booking.setMovie(movie);
+        booking.setShowTime(bookingDTO.getShowTime());
+        booking.setSeats(bookingDTO.getSeats());
+        booking.setBookingTime(LocalDateTime.now());
+        booking.setTotalPrice(movie.getPricePerSeat() * bookingDTO.getSeats());
+        booking.setStatus("Booked");
+
+        return bookingRepository.save(booking);
+    }
+
+    // Get booking details by ID
+    public Optional<Booking> getBookingDetails(Long bookingId) {
+        return bookingRepository.findById(bookingId);
+    }
+
+    // Cancel a booking
+    public String cancelBooking(Long bookingId) {
+        Optional<Booking> booking = bookingRepository.findById(bookingId);
+        if (booking.isPresent()) {
+            bookingRepository.delete(booking.get());
+            return "Booking canceled successfully.";
+        }
+        return "Booking not found.";
+    }
+
+    // Get all bookings for a user
+    public List<Booking> getUserBookings(Long userId) {
+        return bookingRepository.findByUserId(userId);
+    }
+}
+```
+
+---
+
+### 5. **Booking Controller**
+
+This is the REST controller that handles incoming API requests.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+
+    @Autowired
+    private BookingService bookingService;
+
+    // Create a new booking
+    @PostMapping
+    public ResponseEntity<Booking> createBooking(@RequestBody BookingDTO bookingDTO) {
+        Booking newBooking = bookingService.createBooking(bookingDTO);
+        return ResponseEntity.ok(newBooking);
+    }
+
+    // Get details of a booking
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<Booking> getBookingDetails(@PathVariable Long bookingId) {
+        Optional<Booking> booking = bookingService.getBookingDetails(bookingId);
+        return booking.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // Cancel a booking
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<String> cancelBooking(@PathVariable Long bookingId) {
+        String response = bookingService.cancelBooking(bookingId);
+        return ResponseEntity.ok(response);
+    }
+
+    // Get all bookings for a user
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Booking>> getUserBookings(@PathVariable Long userId) {
+        List<Booking> bookings = bookingService.getUserBookings(userId);
+        return ResponseEntity.ok(bookings);
+    }
+}
+```
+
+---
+
+### 6. **Java Bean Configuration Class (Optional)**
+
+If you want to configure beans or add custom configurations for your Spring Boot application, you can create a `@Configuration` class. It's optional in this case since Spring Boot auto-configures most of it, but it can be used for specific configuration needs.
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AppConfig {
+
+    // You can define any beans or configurations here
+    @Bean
+    public SomeOtherService someOtherService() {
+        return new SomeOtherService();
+    }
+}
+```
+
+---
+
+### 7. **Dependencies in `pom.xml`**
+
+Ensure your `pom.xml` includes dependencies for Spring Boot, JPA, and an H2 database (or any database you're using).
+
+```xml
+<dependencies>
+    <!-- Spring Boot Starter Web -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+    <!-- Spring Boot Starter Data JPA -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    
+    <!-- H2 Database (For testing, can be replaced with other DBs) -->
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+
+    <!-- Spring Boot Starter Test -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+
+
+==========================================================================================================================================
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+
+    @Autowired
+    private BookingService bookingService;
+
+    // Create a new booking
+    @PostMapping
+    public Booking createBooking(@RequestBody BookingDTO bookingDTO) {
+        return bookingService.createBooking(bookingDTO);
+    }
+
+    // Get details of a booking by its ID
+    @GetMapping("/{bookingId}")
+    public Booking getBookingDetails(@PathVariable Long bookingId) {
+        Optional<Booking> booking = bookingService.getBookingDetails(bookingId);
+        if (booking.isPresent()) {
+            return booking.get(); // Return the booking details if found
+        } else {
+            return null; // Return null if the booking is not found (or handle differently, like returning an error message)
+        }
+    }
+
+    // Cancel a booking
+    @DeleteMapping("/{bookingId}")
+    public String cancelBooking(@PathVariable Long bookingId) {
+        return bookingService.cancelBooking(bookingId);
+    }
+
+    // Get all bookings for a user
+    @GetMapping("/user/{userId}")
+    public List<Booking> getUserBookings(@PathVariable Long userId) {
+        return bookingService.getUserBookings(userId);
+    }
+}
